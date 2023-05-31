@@ -1,7 +1,7 @@
 epochs = 200
 validate = 1
 log = 8
-path = "experiments/CIFAR100/"
+path = "/data/bertolotto/experiments/CIFAR100/"
 num_gpus = 1
 
 [patience]
