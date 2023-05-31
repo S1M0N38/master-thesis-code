@@ -1,9 +1,11 @@
 import torchmetrics
+from torchmetrics import classification
 
-# Define here metrics that you can use config file
-
-# You can use metrics from torchmetrics, for example:
 Accuracy = torchmetrics.Accuracy
+MulticlassAccuracy = classification.MulticlassAccuracy
 
-# or you can define your own metrics
-# (refer to torchmetrics documentation for more details)
+
+class EmbeddingsAccuracy(classification.MulticlassAccuracy):
+    def update(self, outputs, targets):
+        targets = targets.argmax(dim=-1)
+        super().update(outputs, targets)
