@@ -5,12 +5,12 @@ path = "/data/bertolotto/experiments/CIFAR100/"
 num_gpus = 1
 
 [patience]
-accuracy-top-1 = 10
+accuracy-top-1 = 15
 
 [model]
 class = "EfficientNetB0"
 num_classes = 100
-dropout = 0.5
+dropout = 0.2
 
 [loss]
 class = "CrossEntropyLoss"
