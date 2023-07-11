@@ -109,3 +109,17 @@ class EfficientNetB0(nn.Module):
         if self.l2_norm:
             x = F.normalize(x, dim=-1)
         return x
+
+
+class ResNet18(nn.Module):
+    def __init__(
+        self,
+        num_classes: int = 1000,
+        weights: str | None = None,
+    ):
+        super().__init__()
+        self.model = torchvision.models.resnet18(weights=weights)
+        self.model.fc = nn.Linear(512, num_classes, bias=True)
+
+    def forward(self, x):
+        return self.model(x)
