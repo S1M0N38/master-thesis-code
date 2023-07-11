@@ -1,3 +1,4 @@
+name="xe-b3p-beta0.3"
 epochs = 200
 validate = 1
 log = 8
@@ -28,22 +29,22 @@ eta_min = 1e-5
 
 [dataloaders.train]
 class = "CIFAR100TrainDataLoader"
-path = "/data/bertolotto/datasets/CIFAR100"
-path_embeddings = "/data/bertolotto/datasets/CIFAR100/probabilities/class_descriptions-gpt_sentence_transformer.npy"
+path = "/data/bertolotto/datasets2/datasets/CIFAR100/inputs"
+path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/b3p/beta0.3.npy"
 batch_size = 64
 num_workers = 4
 
 [dataloaders.val]
 class = "CIFAR100ValDataLoader"
-path = "/data/bertolotto/datasets/CIFAR100"
-path_embeddings = "/data/bertolotto/datasets/CIFAR100/probabilities/class_descriptions-gpt_sentence_transformer.npy"
+path = "/data/bertolotto/datasets2/datasets/CIFAR100/inputs"
+path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/b3p/beta0.3.npy"
 batch_size = 64
 num_workers = 4
 
 [dataloaders.test]
 class = "CIFAR100TestDataLoader"
-path = "/data/bertolotto/datasets/CIFAR100"
-path_embeddings = "/data/bertolotto/datasets/CIFAR100/probabilities/class_descriptions-gpt_sentence_transformer.npy"
+path = "/data/bertolotto/datasets2/datasets/CIFAR100/inputs"
+path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/b3p/beta0.3.npy"
 batch_size = 64
 num_workers = 4
 
