@@ -5,6 +5,7 @@ from datetime import datetime
 from hashlib import sha256
 from pathlib import Path
 
+import numpy as np
 import toml
 import torch
 import torchmetrics
@@ -14,6 +15,7 @@ import dataloaders
 import losses
 import metrics
 import models
+import optimizers
 
 
 class Trainer:
@@ -50,8 +52,8 @@ class Trainer:
         )
 
         # [optimizer]
-        cfg["optimizer"]["params"] = self.model.parameters()
-        self.optimizer = init(torch.optim, cfg["optimizer"])
+        cfg["optimizer"]["model"] = self.model
+        self.optimizer = init(optimizers, cfg["optimizer"])
 
         # [lr_scheduler]
         cfg["lr_scheduler"]["optimizer"] = self.optimizer
@@ -75,6 +77,7 @@ class Trainer:
 
         # Track and save results
         self.path = Path(cfg.get("path", ".")) / experiemnt
+        self.path.mkdir(parents=True, exist_ok=True)
         self.writer = SummaryWriter(self.path / "runs")
         self.logger = init_logger(self.path / "trainer.log")
         (self.path / "checkpoints").mkdir()
@@ -260,6 +263,7 @@ class Tester:
 
         # Track and save results
         self.path = Path(cfg.get("path", ".")) / experiemnt
+        self.path.mkdir(parents=True, exist_ok=True)
         self.logger = init_logger(self.path / "tester.log")
         self.logger.info(f"Tester initialized using {self.path / 'config.toml'}")
         self.logger.debug(f"Using {self.device} as device.")
@@ -272,19 +276,42 @@ class Tester:
         self.model.load_state_dict(checkpoint["model"])
         return self
 
-    def test(self) -> dict[str, torch.Tensor]:
+    def test(self, save: bool = False) -> dict[str, torch.Tensor]:
         self.model = self.model.eval()
         self.logger.info("Start testing.")
+
+        if save:
+            _, y = next(iter(self.dataloader_test))
+            bs, len_target = y.shape if y.ndim > 1 else y.unsqueeze(1).shape
+            len_output = self.config["model"]["num_classes"]
+            len_dataset = len(self.dataloader_test.dataset)
+            arr_outputs = torch.empty(len_dataset, len_output).to(self.device)
+            arr_targets = torch.empty(len_dataset, len_target).to(self.device)
+            self.logger.info(f"Saving results to {self.path / 'outputs_targets.npz'}")
+
         with torch.no_grad():
-            for inputs, targets in self.dataloader_test:
+            for batch, (inputs, targets) in enumerate(self.dataloader_test):
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 outputs = self.model(inputs)
                 loss = self.loss(outputs, targets)
                 self.metrics_test(outputs, targets)
                 self.loss_test(loss)
+                if save:
+                    loc = slice(batch * bs, batch * bs + len(inputs))  # type: ignore
+                    targets = targets if targets.ndim > 1 else targets.unsqueeze(1)
+                    arr_outputs[loc] = outputs  # type: ignore
+                    arr_targets[loc] = targets  # type: ignore
 
             metrics = self.metrics_test.compute()
             metrics["loss"] = self.loss_test.compute()
+
+        if save:
+            np.savez_compressed(
+                self.path / "outputs_targets.npz",
+                outputs=arr_outputs.cpu().numpy(),  # type: ignore
+                targets=arr_targets.cpu().numpy(),  # type: ignore
+            )
+            self.logger.info(f"Saved results to {self.path / 'outputs_targets.npz'}")
 
         self.logger.info("Testing completed.")
         return metrics
@@ -309,7 +336,8 @@ def init_logger(path: Path):
 def generate_experiment_name(config: dict):
     now = datetime.now()
     hash = sha256(toml.dumps(config).encode()).hexdigest()[:8]
-    return f"{now.strftime('%m%d_%H%M')}_{hash}"
+    name = config.get("name", "exp")
+    return f"{now.strftime('%m%d_%H%M')}_{hash}_{name}"
 
 
 if __name__ == "__main__":
@@ -323,8 +351,8 @@ if __name__ == "__main__":
     trainer.train()
 
     tester = Tester(config, experiement)
-    tester.load(tester.path / "checkpoints" / "last.pt")
-    print(f"Progress at {trainer.path.parent / '*' / 'tester.log'}")
+    tester.load(tester.path / "checkpoints" / "accuracy-top-1.pt")
+    print(f"Progress at {tester.path.parent / '*' / 'tester.log'}")
     print("Testing ...")
-    results = tester.test()
+    results = tester.test(save=True)
     print(results)
