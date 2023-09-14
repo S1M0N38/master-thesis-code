@@ -15,7 +15,7 @@ dropout = 0.2
 weights = "IMAGENET1K_V1"
 
 [loss]
-class = "CrossEntropyLoss"
+class = "CosineDistanceLoss"
 
 [optimizer]
 class = "Adam"
