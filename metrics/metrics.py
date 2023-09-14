@@ -2,17 +2,26 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import torchmetrics
-from torchmetrics import classification
 
+# Use this metric when calculating the accuracy for one-hot encoding.
 Accuracy = torchmetrics.Accuracy
 
+"""
+from torchmetrics import classification
+
+It seams that there is some kind of bug in this implemantation.
+More over during futher development it beacome clear that a more logical way
+to obatin the predicted class from model output not by applying argmax directly.
+Use AllignmnetAccuracy instead.
 
 class EmbeddingsAccuracy(classification.MulticlassAccuracy):
     def update(self, outputs: torch.Tensor, targets: torch.Tensor):
         labels = targets.argmax(dim=-1)
         super().update(outputs, labels)
+"""
 
 
+# Use this metrics when calculating the accuracy for others embeddings.
 class AlignmentAccuracy(torchmetrics.Metric):
     def __init__(self, path_embeddings: str, top_k: int = 1) -> None:
         super().__init__()
