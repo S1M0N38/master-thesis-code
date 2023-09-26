@@ -1,4 +1,4 @@
-name="cd-desc-pca-n_components100"
+name="cd-desc-pca-d100"
 epochs = 200
 validate = 1
 log = 8
@@ -30,50 +30,50 @@ eta_min = 1e-5
 [dataloaders.train]
 class = "CIFAR100TrainDataLoader"
 path = "/data/bertolotto/datasets2/datasets/CIFAR100/inputs"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/n_components100.npy"
+path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/d100.npy"
 batch_size = 64
 num_workers = 4
 
 [dataloaders.val]
 class = "CIFAR100ValDataLoader"
 path = "/data/bertolotto/datasets2/datasets/CIFAR100/inputs"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/n_components100.npy"
+path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/d100.npy"
 batch_size = 64
 num_workers = 4
 
 [dataloaders.test]
 class = "CIFAR100TestDataLoader"
 path = "/data/bertolotto/datasets2/datasets/CIFAR100/inputs"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/n_components100.npy"
+path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/d100.npy"
 batch_size = 64
 num_workers = 4
 
 [metrics.train.accuracy-top-1]
 class = "AlignmentAccuracy"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/n_components100.npy"
+path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/d100.npy"
 top_k = 1
 
 [metrics.train.accuracy-top-5]
 class = "AlignmentAccuracy"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/n_components100.npy"
+path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/d100.npy"
 top_k = 5
 
 [metrics.val.accuracy-top-1]
 class = "AlignmentAccuracy"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/n_components100.npy"
+path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/d100.npy"
 top_k = 1
 
 [metrics.val.accuracy-top-5]
 class = "AlignmentAccuracy"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/n_components100.npy"
+path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/d100.npy"
 top_k = 5
 
 [metrics.test.accuracy-top-1]
 class = "AlignmentAccuracy"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/n_components100.npy"
+path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/d100.npy"
 top_k = 1
 
 [metrics.test.accuracy-top-5]
 class = "AlignmentAccuracy"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/n_components100.npy"
+path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/desc-pca/ada/austen/d100.npy"
 top_k = 5
