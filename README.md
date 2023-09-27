@@ -20,7 +20,7 @@ thesis](https://github.com/S1M0N38/master-thesis). I find useful to have access
 to the code to check the implementation describe by scientific papers, so here
 it is.
 
-# Installation (NOT WORKING YET)
+# Installation (WIP)
 
 1. Clone the repository and its submodule `datasets`
 ```bash
@@ -32,7 +32,11 @@ cd master-thesis-code
 ```
 3. Create a folder or symbolic link to store experiments, i.e. training results
 ```bash
-mkdir experiments # or ln -s /path/to/experiments experiments
+mkdir experiments
+# This folder will become heavy by storing training results (checkpoints,
+# models' outputs, etc.) so you can create where you have enough space and then
+# just create a symbolic link to it:
+# ln -s /path/to/experiments experiments
 ```
 4. Create a virtual environment with python 3.10 (check with `python -V`)
 ```bash
@@ -46,10 +50,10 @@ source .venv/bin/activate
 ```bash
 python -m pip install -r requirements.txt
 ```
-7. Download the datasets
-```bash
-/bin/bash -c "$(curl -fsSL https://s1m0n38.xyz/scripts/master-thesis-download-dataset.sh)"
-```
+<!-- 7. Download the datasets -->
+<!-- ```bash -->
+<!-- /bin/bash -c "$(curl -fsSL https://S1M0N38.xyz/scripts/master-thesis-datasets-download.sh)" -->
+<!-- ``` -->
 8. Create symbolic links to the datasets
 ```bash
 # Symbolic to CIFAR100
