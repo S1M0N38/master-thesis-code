@@ -73,7 +73,8 @@ class Tester:
             self.logger.info(f"Saving results to {self.path / 'outputs_targets.npz'}")
 
         with torch.no_grad():
-            for batch, (inputs, targets) in enumerate(self.dataloader_test):
+            pbar = tqdm(self.dataloader_test, total=len(self.dataloader_test))
+            for batch, (inputs, targets) in enumerate(pbar):
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 outputs = self.model(inputs)
                 loss = self.loss(outputs, targets)
