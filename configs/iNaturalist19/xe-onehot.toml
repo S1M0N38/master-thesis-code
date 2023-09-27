@@ -2,7 +2,7 @@ name = "xe-onehot"
 epochs = 200
 validate = 1
 log = 8
-path = "/data/bertolotto/experiments/iNaturalist19/"
+path = "experiments/iNaturalist19/"
 num_gpus = 1
 
 [patience]
@@ -30,19 +30,19 @@ eta_min = 1e-5
 
 [dataloaders.train]
 class = "INaturalist19TrainDataLoader"
-path = "/data/bertolotto/datasets2/datasets/iNaturalist19/inputs/train"
+path = "datasets/datasets/iNaturalist19/inputs/train"
 batch_size = 64
 num_workers = 4
 
 [dataloaders.val]
 class = "INaturalist19ValDataLoader"
-path = "/data/bertolotto/datasets2/datasets/iNaturalist19/inputs/val"
+path = "datasets/datasets/iNaturalist19/inputs/val"
 batch_size = 64
 num_workers = 4
 
 [dataloaders.test]
 class = "INaturalist19TestDataLoader"
-path = "/data/bertolotto/datasets2/datasets/iNaturalist19/inputs/test"
+path = "datasets/datasets/iNaturalist19/inputs/test"
 batch_size = 64
 num_workers = 4
 
