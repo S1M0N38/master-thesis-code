@@ -70,5 +70,5 @@ ls -s path/to/cifar-100-python datasets/CIFAR100/inputs/cifar-100-python
 # ln -s path/to/tieredImageNet/test  datasets/tieredImageNet/inputs/test
 ```
 
-[^1] Alternatively, you can git clone
+[^1]: Alternatively, you can git clone
 `https://github.com/S1M0N38/master-thesis-datasets` and create symbolic
