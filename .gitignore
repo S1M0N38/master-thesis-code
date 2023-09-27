@@ -208,8 +208,8 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,python
 
+*.pdf
 experiments/
-evaluations/results/
 notebooks/results/
 sync.sh
 tricks.md
