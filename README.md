@@ -50,7 +50,7 @@ source .venv/bin/activate
 ```bash
 python -m pip install -r requirements.txt
 ```
-<!-- 7. Download the datasets -->
+7. Download the datasets
 <!-- ```bash -->
 <!-- /bin/bash -c "$(curl -fsSL https://S1M0N38.xyz/scripts/master-thesis-datasets-download.sh)" -->
 <!-- ``` -->
