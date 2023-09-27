@@ -20,9 +20,9 @@ thesis](https://github.com/S1M0N38/master-thesis). I find useful to have access
 to the code to check the implementation describe by scientific papers, so here
 it is.
 
-# Installation (WIP)
+# Installation
 
-1. Clone the repository and its submodule `datasets`
+1. Clone the repository and its submodule `datasets` [^1]
 ```bash
 git clone --recurse-submodules https://github.com/S1M0N38/master-thesis-code.git
 ```
@@ -69,3 +69,6 @@ ls -s path/to/cifar-100-python datasets/CIFAR100/inputs/cifar-100-python
 # ln -s path/to/tieredImageNet/val   datasets/tieredImageNet/inputs/val
 # ln -s path/to/tieredImageNet/test  datasets/tieredImageNet/inputs/test
 ```
+
+[^1] Alternatively, you can git clone
+`https://github.com/S1M0N38/master-thesis-datasets` and create symbolic
