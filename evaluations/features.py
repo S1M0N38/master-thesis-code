@@ -14,7 +14,7 @@ DATASET = sys.argv[1]
 # Path
 PATH_ROOT = Path(__file__).parent.parent
 PATH_EXPERIMENTS = PATH_ROOT / "experiments" / DATASET
-PATH_DATASET = PATH_ROOT / "datasets" / DATASET
+PATH_DATASET = PATH_ROOT / "datasets" / "datasets" / DATASET
 PATH_ENCODINGS = PATH_DATASET / "encodings"
 PATH_RESULTS = PATH_ROOT / "evaluation" / "results" / DATASET
 
