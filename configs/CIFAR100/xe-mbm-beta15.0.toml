@@ -2,7 +2,7 @@ name="xe-mbm-beta15.0"
 epochs = 200
 validate = 1
 log = 8
-path = "/data/bertolotto/experiments/CIFAR100/"
+path = "experiments/CIFAR100/"
 num_gpus = 1
 
 [patience]
@@ -29,51 +29,51 @@ eta_min = 1e-5
 
 [dataloaders.train]
 class = "CIFAR100TrainDataLoader"
-path = "/data/bertolotto/datasets2/datasets/CIFAR100/inputs"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
+path = "datasets/datasets/CIFAR100/inputs"
+path_embeddings = "datasets/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
 batch_size = 64
 num_workers = 4
 
 [dataloaders.val]
 class = "CIFAR100ValDataLoader"
-path = "/data/bertolotto/datasets2/datasets/CIFAR100/inputs"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
+path = "datasets/datasets/CIFAR100/inputs"
+path_embeddings = "datasets/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
 batch_size = 64
 num_workers = 4
 
 [dataloaders.test]
 class = "CIFAR100TestDataLoader"
-path = "/data/bertolotto/datasets2/datasets/CIFAR100/inputs"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
+path = "datasets/datasets/CIFAR100/inputs"
+path_embeddings = "datasets/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
 batch_size = 64
 num_workers = 4
 
 [metrics.train.accuracy-top-1]
 class = "AlignmentAccuracy"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
+path_embeddings = "datasets/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
 top_k = 1
 
 [metrics.train.accuracy-top-5]
 class = "AlignmentAccuracy"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
+path_embeddings = "datasets/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
 top_k = 5
 
 [metrics.val.accuracy-top-1]
 class = "AlignmentAccuracy"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
+path_embeddings = "datasets/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
 top_k = 1
 
 [metrics.val.accuracy-top-5]
 class = "AlignmentAccuracy"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
+path_embeddings = "datasets/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
 top_k = 5
 
 [metrics.test.accuracy-top-1]
 class = "AlignmentAccuracy"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
+path_embeddings = "datasets/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
 top_k = 1
 
 [metrics.test.accuracy-top-5]
 class = "AlignmentAccuracy"
-path_embeddings = "/data/bertolotto/datasets2/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
+path_embeddings = "datasets/datasets/CIFAR100/encodings/mbm/beta15.0.npy"
 top_k = 5

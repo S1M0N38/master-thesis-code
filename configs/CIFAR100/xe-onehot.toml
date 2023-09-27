@@ -2,7 +2,7 @@ name = "xe-onehot"
 epochs = 200
 validate = 1
 log = 8
-path = "/data/bertolotto/experiments/CIFAR100/"
+path = "experiments/CIFAR100/"
 num_gpus = 1
 
 [patience]
@@ -29,19 +29,19 @@ eta_min = 1e-5
 
 [dataloaders.train]
 class = "CIFAR100TrainDataLoader"
-path = "/data/bertolotto/datasets2/datasets/CIFAR100/inputs"
+path = "datasets/datasets/CIFAR100/inputs"
 batch_size = 64
 num_workers = 4
 
 [dataloaders.val]
 class = "CIFAR100ValDataLoader"
-path = "/data/bertolotto/datasets2/datasets/CIFAR100/inputs"
+path = "datasets/datasets/CIFAR100/inputs"
 batch_size = 64
 num_workers = 4
 
 [dataloaders.test]
 class = "CIFAR100TestDataLoader"
-path = "/data/bertolotto/datasets2/datasets/CIFAR100/inputs"
+path = "datasets/datasets/CIFAR100/inputs"
 batch_size = 64
 num_workers = 4
 
