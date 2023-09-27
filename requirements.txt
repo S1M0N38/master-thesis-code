@@ -1,7 +1,8 @@
-tbparse
 tensorboard
 toml
 torch
 torchvision
 torchmetrics
+tqdm
 scikit-learn
+s-dbw
