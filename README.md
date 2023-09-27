@@ -5,7 +5,7 @@
   <a>
     <img alt="Python" src="https://img.shields.io/badge/python-3.10-blue?style=for-the-badge&amp;logo=python">
   </a>
-  <a href="https://github.com/S1M0N38/master-thesis-code/blob/main/LICENSESE">
+  <a href="https://github.com/S1M0N38/master-thesis-code/blob/main/LICENSE">
     <img alt="License" src="https://img.shields.io/github/license/S1M0N38/master-thesis-code?style=for-the-badge&amp;color=ff69b4">
   </a>
   <a href="https://discord.com/users/S1M0N38#0317">
