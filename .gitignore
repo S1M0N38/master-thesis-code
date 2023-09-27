@@ -1,2 +1,6 @@
 experiments/
+evaluations/results/
+notebooks/results/
+sync.sh
+tricks.md
 .venv
