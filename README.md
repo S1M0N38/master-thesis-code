@@ -57,18 +57,18 @@ python -m pip install -r requirements.txt
 8. Create symbolic links to the datasets
 ```bash
 # Symbolic to CIFAR100
-ls -s path/to/cifar-100-python datasets/CIFAR100/inputs/cifar-100-python
+ln -s path/to/cifar-100-python datasets/datasets/CIFAR100/inputs/cifar-100-python
 
 # Symbolic to iNaturalist19
-# ln -s path/to/iNaturalist19/train datasets/iNaturalist19/inputs/train
-# ln -s path/to/iNaturalist19/val   datasets/iNaturalist19/inputs/val
-# ln -s path/to/iNaturalist19/test  datasets/iNaturalist19/inputs/test
+# ln -s path/to/iNaturalist19/train datasets/datasets/iNaturalist19/inputs/train
+# ln -s path/to/iNaturalist19/val   datasets/datasets/iNaturalist19/inputs/val
+# ln -s path/to/iNaturalist19/test  datasets/datasets/iNaturalist19/inputs/test
 
 # Symbolic to tieredImageNet
-# ln -s path/to/tieredImageNet/train datasets/tieredImageNet/inputs/train
-# ln -s path/to/tieredImageNet/val   datasets/tieredImageNet/inputs/val
-# ln -s path/to/tieredImageNet/test  datasets/tieredImageNet/inputs/test
+# ln -s path/to/tieredImageNet/train datasets/datasets/tieredImageNet/inputs/train
+# ln -s path/to/tieredImageNet/val   datasets/datasets/tieredImageNet/inputs/val
+# ln -s path/to/tieredImageNet/test  datasets/datasets/tieredImageNet/inputs/test
 ```
 
 [^1]: Alternatively, you can git clone
-`https://github.com/S1M0N38/master-thesis-datasets` and create symbolic
+`https://github.com/S1M0N38/master-thesis-datasets` and create symbolic link
