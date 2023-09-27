@@ -16,7 +16,7 @@ PATH_ROOT = Path(__file__).parent.parent
 PATH_EXPERIMENTS = PATH_ROOT / "experiments" / DATASET
 PATH_DATASET = PATH_ROOT / "datasets" / "datasets" / DATASET
 PATH_ENCODINGS = PATH_DATASET / "encodings"
-PATH_RESULTS = PATH_ROOT / "evaluation" / "results" / DATASET
+PATH_RESULTS = PATH_ROOT / "evaluations" / "results" / DATASET
 
 HIERARCHY = np.load(PATH_DATASET / "hierarchy" / "hierarchy.npy")
 
@@ -44,7 +44,7 @@ def features_labels(exp):
 
 
 exps = pd.read_csv(
-    PATH_EXPERIMENTS / "experiments.csv",
+    PATH_RESULTS / "experiments.csv",
     index_col="id",
     converters={"encoding": lambda enc: PATH_ENCODINGS / enc},
     comment="#",
