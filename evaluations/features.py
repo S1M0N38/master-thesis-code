@@ -4,8 +4,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from s_dbw import S_Dbw as sdbw_score
-from sklearn.metrics import (calinski_harabasz_score, davies_bouldin_score,
-                             silhouette_score)
+from sklearn.metrics import (
+    calinski_harabasz_score,
+    davies_bouldin_score,
+    silhouette_score,
+)
 from tqdm import tqdm, trange
 
 # Avaialve datasets: CIFAR100, iNaturalist19, tieredImageNet
@@ -78,16 +81,21 @@ except FileNotFoundError:
 
 # Perform new calculations
 todo = df.loc[df.index.difference(done)]
-pbar = tqdm(todo.iterrows(), total=len(todo), desc="Experiments")  # type: ignore
+pbar = tqdm(todo.iterrows(), total=len(todo))  # type: ignore
 for exp, row in pbar:  # type: ignore
     f, labels = features_labels(exp)
-    levels = trange(len(HIERARCHY) - 1, leave=False, desc=str(exp))
+    pbar.set_description_str(str(exp))
+    levels = trange(len(HIERARCHY) - 1, leave=False)
     for lvl in levels:
-        labels = HIERARCHY[lvl][labels]
-        df.loc[exp, (lvl, "silhouette")] = silhouette_score(f, labels)
-        df.loc[exp, (lvl, "calinski_harabasz")] = calinski_harabasz_score(f, labels)
-        df.loc[exp, (lvl, "davies_bouldin")] = davies_bouldin_score(f, labels)
-        df.loc[exp, (lvl, "sdbw")] = sdbw_score(f, labels)
+        lb = HIERARCHY[lvl][labels]
+        levels.set_description_str("silhouette")
+        df.loc[exp, (lvl, "silhouette")] = silhouette_score(f, lb)
+        levels.set_description_str("calinski_harabasz")
+        df.loc[exp, (lvl, "calinski_harabasz")] = calinski_harabasz_score(f, lb)
+        levels.set_description_str("davies_bouldin")
+        df.loc[exp, (lvl, "davies_bouldin")] = davies_bouldin_score(f, lb)
+        levels.set_description_str("sdbw")
+        df.loc[exp, (lvl, "sdbw")] = sdbw_score(f, lb)
 
 
 df.to_pickle(PATH_RESULTS / "features" / "metrics.pkl")
