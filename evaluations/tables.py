@@ -1,13 +1,15 @@
 from pathlib import Path
 import re
 import numpy as np
+import sys
+from functools import partial
 
 import pandas as pd
 from pandas.io.formats.style import Styler
 
 
 # Avaialve datasets: CIFAR100, iNaturalist19, tieredImageNet
-DATASET = "CIFAR100"  # sys.argv[1]
+DATASET = sys.argv[1]
 assert DATASET in ["CIFAR100", "iNaturalist19", "tieredImageNet"]
 
 # Path
@@ -34,9 +36,11 @@ assert isinstance(predictions, pd.DataFrame)
 assert isinstance(features, pd.DataFrame)
 
 metrics = {
+    # Predictions metrics
     "error_rate": "Error Rate",
     "hier_dist_mistake": "Hier. Dist. M.",
     "hier_dist": "Hier. Dist.",
+    # Features metrics
     "silhouette": "Silhouette",
     "calinski_harabasz": "CH",
     "davies_bouldin": "DB",
@@ -52,7 +56,7 @@ def highlight_predictions(dfs: Styler, axis: int = 0) -> Styler:
     Args:
         dfs (Styler): The pandas Styler object representing the DataFrame to be styled.
         axis (int, optional): The axis along which to apply the styling
-            (0 for rows, 1 for columns). Defaults to 0.
+        (0 for rows, 1 for columns). Defaults to 0.
 
     Returns:
         Styler: A Styler object with the specified styling applied.
@@ -92,15 +96,12 @@ def highlight_features(dfs: Styler, axis: int = 0) -> Styler:
     return dfs
 
 
-# TODO: format_prediction
-# TODO: format_feature
-
-
 def table_html(df: pd.DataFrame, path: str) -> Styler:
     """Create HTML table with the predictions metrics for each experiment.
     This table is used to select the best experiment for each type.
     This will not be used in the final paper.
     """
+    # df = df.filter(like="cd-desc", axis=0)
     dfs = df.style.format(precision=3)
     dfs = dfs.format_index(lambda i: i.split("_")[-1], axis=0)
 
@@ -120,26 +121,45 @@ def table_tex(df: pd.DataFrame, path: str) -> str:
     each experiment type. This table will be include in the paper.
     """
     global std_index
+    idx = pd.IndexSlice
     std_index = 0
     df_mean = df.groupby(exps[exps["selected"]]["name"]).mean()
-    df_std = df.groupby(exps[exps["selected"]]["name"]).std()
+    df_std = df.groupby(exps[exps["selected"]]["name"]).std().fillna(0)  # type: ignore
 
     dfs = df_mean.T.style  # Traspose df scales better to more levels
 
-    def mean_with_std(value):
+    def fmt(value: float, precision: float):
         global std_index
         std = df_std.T.stack().values[std_index]  # type: ignore
         std_index += 1
-        return rf"{value:.3f} \mdseries ± {std:.3f}"
+        return rf"{value:.{precision}f} \mdseries ± {std:.{precision}f}"
 
     # Cells Style
     if path == "predictions":
         dfs = highlight_predictions(dfs, axis=1)
+        # It's ok to use precision=3 for all predictions metrics
+        dfs = dfs.format(partial(fmt, precision=3))
     elif path == "features":
         dfs = highlight_features(dfs, axis=1)
+        # Format values with the right number of digits
+        dfs = dfs.format(
+            partial(fmt, precision=3),
+            subset=idx[idx[:, ["silhouette"]], :],
+        )
+        dfs = dfs.format(
+            partial(fmt, precision=0),
+            subset=idx[idx[:, ["calinski_harabasz"]], :],
+        )
+        dfs = dfs.format(
+            partial(fmt, precision=2),
+            subset=idx[idx[:, ["davies_bouldin"]], :],
+        )
+        dfs = dfs.format(
+            partial(fmt, precision=3),
+            subset=idx[idx[:, ["sdbw"]], :],
+        )
     else:
         raise ValueError("Path can be 'predictions' or 'features'.")
-    dfs = dfs.format(mean_with_std, escape="latex")
 
     # Headers Style
     dfs = dfs.hide(names=True, axis=0)  # type: ignore
