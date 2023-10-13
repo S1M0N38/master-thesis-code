@@ -6,5 +6,7 @@ torch
 torchvision
 torchmetrics
 tqdm
+matplotlib
 scikit-learn
 s-dbw
+ipykernel
