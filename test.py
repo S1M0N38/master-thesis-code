@@ -163,7 +163,7 @@ def get_experiements(config: dict) -> list[Path]:
     if len(experiements) > 1:
         print("0. All")
 
-    i = int(input("Select experiement: "))
+    i = int(sys.argv[2]) if len(sys.argv) > 2 else int(input("Select experiement: "))
     if i == 0:
         experiements = experiements
     else:
