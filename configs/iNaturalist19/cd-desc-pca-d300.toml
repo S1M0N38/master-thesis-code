@@ -19,7 +19,7 @@ class = "CosineDistanceLoss"
 
 [optimizer]
 class = "Adam"
-lr = 1e-4
+lr = 1e-3
 weight_decay = 0
 amsgrad = true
 
