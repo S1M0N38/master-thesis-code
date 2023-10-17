@@ -1,3 +1,5 @@
+from collections.abc import Callable
+import json
 import copy
 import logging
 import sys
@@ -59,8 +61,10 @@ class Tester:
         self.model.load_state_dict(checkpoint["model"])
         return self
 
-    def test(self, save: bool = False) -> dict[str, torch.Tensor]:
+    def test(self, save: bool = False) -> dict[str, float]:
         self.model = self.model.eval()
+        self.metrics_test.reset()
+        self.loss_test.reset()
         self.logger.info("Start testing.")
 
         if save:
@@ -86,8 +90,8 @@ class Tester:
                     arr_outputs[loc] = outputs  # type: ignore
                     arr_targets[loc] = targets  # type: ignore
 
-            metrics = self.metrics_test.compute()
-            metrics["loss"] = self.loss_test.compute()
+            metrics_ = {k: v.item() for k, v in self.metrics_test.compute().items()}
+            metrics_["loss"] = self.loss_test.compute().item()
 
         if save:
             np.savez_compressed(
@@ -98,7 +102,7 @@ class Tester:
             self.logger.info(f"Saved results to {self.path / 'outputs_targets.npz'}")
 
         self.logger.info("Testing completed.")
-        return metrics
+        return metrics_
 
     def features_extraction(self, node: str, len_features: int) -> None:
         self.logger.info("Create features extractor")
@@ -131,6 +135,38 @@ class Tester:
         self.logger.info(f"Saved results to {self.path / 'features_targets.npz'}")
         self.logger.info("Features extractions completed.")
 
+    def attack(self, attack: Callable, epsilon: float) -> dict[str, float]:
+        self.model = self.model.eval()
+        self.metrics_test.reset()
+        self.loss_test.reset()
+        self.logger.info("Starting attack.")
+
+        pbar = tqdm(self.dataloader_test, total=len(self.dataloader_test))
+        for inputs, targets in pbar:
+            inputs, targets = inputs.to(self.device), targets.to(self.device)
+            # Need to derive wrt to inputs, for this reason batch size must
+            # be reduce in order to fit the data into memory
+            inputs.requires_grad = True
+
+            outputs = self.model(inputs)
+            loss = self.loss(outputs, targets)
+            self.model.zero_grad()
+            loss.backward()
+
+            # x are denormalized inputs
+            x = self.dataloader_test.denorm(inputs)
+            x_perturbed = attack(x, inputs.grad.data, epsilon)
+            inputs_perturbed = self.dataloader_test.norm(x_perturbed)
+
+            # Evaluate model on perturded inputs
+            outputs_perturbed = self.model(inputs_perturbed)
+            loss = self.loss(outputs, targets)
+            self.metrics_test(outputs_perturbed, targets)
+            self.loss_test(loss)
+
+        metrics_ = {k: v.item() for k, v in self.metrics_test.compute().items()}
+        metrics_["loss"] = self.loss_test.compute().item()
+        return metrics_
 
 def init(module: object, class_args: dict):
     class_name = class_args.pop("class")
@@ -171,6 +207,16 @@ def get_experiements(config: dict) -> list[Path]:
 
     return experiements
 
+def fgsm(inputs_denorm, inputs_grad, epsilon) -> torch.Tensor:
+    """
+    FGSM attack: very simple, but effective
+    x' = x + eps * sign(dL/dx)
+    """
+    inputs_grad_sign = inputs_grad.sign()
+    inputs_denorm_perturbed = inputs_denorm + epsilon * inputs_grad_sign
+    inputs_denorm_perturbed = torch.clamp(inputs_denorm_perturbed, 0, 1)
+    return inputs_denorm_perturbed
+
 
 if __name__ == "__main__":
     config = toml.load(Path(sys.argv[1]))
@@ -181,11 +227,18 @@ if __name__ == "__main__":
         tester = Tester(config, experiement.name)
         tester.load(tester.path / "checkpoints" / "accuracy-top-1.pt")
 
-        print(f"Progress at {tester.path.parent / '*' / 'tester.log'}")
-        print("Features extraction ...")
-        tester.features_extraction("model.flatten", 1280)
+        # print(f"Progress at {tester.path.parent / '*' / 'tester.log'}")
+        # print("Features extraction ...")
+        # tester.features_extraction("model.flatten", 1280)
 
         print(f"Progress at {tester.path.parent / '*' / 'tester.log'}")
         print("Testing ...")
-        results = tester.test(save=True)
-        print(results)
+        results = tester.test(save=False)
+        with open(tester.path / "classification_metrics.json", "w") as json_file:
+            json.dump(results, json_file)
+
+        print(f"Progress at {tester.path.parent / '*' / 'tester.log'}")
+        print("Attack ...")
+        results = tester.attack(attack=fgsm, epsilon=0.001)
+        with open(tester.path / "adversarial_metrics.json", "w") as json_file:
+            json.dump(results, json_file)
