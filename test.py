@@ -1,11 +1,10 @@
 import argparse
 import copy
-import json
 import logging
-from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
+from pandas.io.pytables import attribute_conflict_doc
 import toml
 import torch
 import torchmetrics
@@ -45,6 +44,12 @@ class Tester:
                 for name, metric in cfg["metrics"]["test"].items()
             }
         )
+        self.metrics_test_adv = torchmetrics.MetricCollection(
+            {
+                name: init(metrics, metric).to(self.device)
+                for name, metric in cfg["metrics"]["test"].items()
+            }
+        )
 
         # Track and save results
         self.path = Path(cfg.get("path", ".")) / experiemnt
@@ -61,143 +66,124 @@ class Tester:
         self.model.load_state_dict(checkpoint["model"])
         return self
 
-    def test(self, save: bool = False) -> dict[str, float]:
-        self.model = self.model.eval()
+    def _save_batch(self, dim):
+        _, y = next(iter(self.dataloader_test))
+        bs, targets_dim = y.shape if y.ndim > 1 else y.unsqueeze(1).shape
+        len_dataset = len(self.dataloader_test.dataset)
+        tensor = torch.empty(len_dataset, dim, device="cpu")
+
+        def save(batch_idx, values):
+            loc = slice(batch_idx * bs, batch_idx * bs + len(values))
+            values = values if values.ndim > 1 else values.unsqueeze(1)
+            tensor[loc] = values.detach().cpu()
+            return tensor
+
+        return save, bs, targets_dim
+
+    def test(
+        self,
+        outputs_node: str,
+        outputs_dim: int,
+        features_node: str,
+        features_dim: int,
+        attack_eps: float,
+        attack_target: torch.Tensor | None = None,
+        attack_target_name: str = "_",
+    ):
         self.metrics_test.reset()
-        self.loss_test.reset()
+        self.metrics_test_adv.reset()
+        self.model.eval()
         self.logger.info("Start testing.")
 
-        if save:
-            _, y = next(iter(self.dataloader_test))
-            bs, len_target = y.shape if y.ndim > 1 else y.unsqueeze(1).shape
-            len_output = self.config["model"]["num_classes"]
-            len_dataset = len(self.dataloader_test.dataset)
-            arr_outputs = torch.empty(len_dataset, len_output).to(self.device)
-            arr_targets = torch.empty(len_dataset, len_target).to(self.device)
-            self.logger.info(f"Saving results to {self.path / 'outputs_targets.npz'}")
+        save_outputs, *_, targets_dim = self._save_batch(outputs_dim)
+        save_features, *_ = self._save_batch(features_dim)
+        save_outputs_adv, *_ = self._save_batch(outputs_dim)
+        save_features_adv, *_ = self._save_batch(features_dim)
+        save_targets, *_ = self._save_batch(targets_dim)
 
-        with torch.no_grad():
-            pbar = tqdm(self.dataloader_test, total=len(self.dataloader_test))
-            for batch, (inputs, targets) in enumerate(pbar):
-                inputs, targets = inputs.to(self.device), targets.to(self.device)
-                outputs = self.model(inputs)
-                loss = self.loss(outputs, targets)
-                self.metrics_test(outputs, targets)
-                self.loss_test(loss)
-                if save:
-                    loc = slice(batch * bs, batch * bs + len(inputs))  # type: ignore
-                    targets = targets if targets.ndim > 1 else targets.unsqueeze(1)
-                    arr_outputs[loc] = outputs  # type: ignore
-                    arr_targets[loc] = targets  # type: ignore
-            metrics_ = {k: v.item() for k, v in self.metrics_test.compute().items()}
+        path_results = self.path / "results"
+        path_results_adv = self.path / "results" / attack_target_name
+        path_results.mkdir(exist_ok=True)
+        path_results_adv.mkdir(exist_ok=True)
 
-            metrics_["loss"] = self.loss_test.compute().item()
-
-        if save:
-            np.savez_compressed(
-                self.path / "outputs_targets.npz",
-                outputs=arr_outputs.cpu().numpy(),  # type: ignore
-                targets=arr_targets.cpu().numpy(),  # type: ignore
-            )
-            self.logger.info(f"Saved results to {self.path / 'outputs_targets.npz'}")
-
-        self.logger.info("Testing completed.")
-        return metrics_
-
-    def features_extraction(self, node: str, len_features: int) -> None:
-        self.logger.info("Create features extractor")
-        model = create_feature_extractor(self.model, return_nodes={node: "features"})
+        return_nodes = {outputs_node: "outputs", features_node: "features"}
+        model = create_feature_extractor(self.model, return_nodes=return_nodes)
         model.eval()
-        self.logger.info("Start features extraction.")
 
-        _, y = next(iter(self.dataloader_test))
-        bs, len_target = y.shape if y.ndim > 1 else y.unsqueeze(1).shape
-        len_dataset = len(self.dataloader_test.dataset)
-        arr_features = torch.empty(len_dataset, len_features).to(self.device)
-        arr_targets = torch.empty(len_dataset, len_target).to(self.device)
-        self.logger.info(f"Saving results to {self.path / 'features_targets.npz'}")
-
-        with torch.no_grad():
-            pbar = tqdm(self.dataloader_test, total=len(self.dataloader_test))
-            for batch, (inputs, targets) in enumerate(pbar):
-                inputs, targets = inputs.to(self.device), targets.to(self.device)
-                features = model(inputs)["features"]
-                loc = slice(batch * bs, batch * bs + len(inputs))  # type: ignore
-                targets = targets if targets.ndim > 1 else targets.unsqueeze(1)
-                arr_features[loc] = features  # type: ignore
-                arr_targets[loc] = targets  # type: ignore
-
-        np.savez_compressed(
-            self.path / "features_targets.npz",
-            features=arr_features.cpu().numpy(),  # type: ignore
-            targets=arr_targets.cpu().numpy(),  # type: ignore
-        )
-        self.logger.info(f"Saved results to {self.path / 'features_targets.npz'}")
-        self.logger.info("Features extractions completed.")
-
-    def attack(
-        self, attack: Callable, epsilon: float, save: bool = False
-    ) -> dict[str, float]:
-        self.model = self.model.eval()
-        self.metrics_test.reset()
-        self.loss_test.reset()
-        self.logger.info("Starting attack.")
-
-        filename = f"uattack-eps{epsilon:.5f}_targets.npz"
-        if save:
-            _, y = next(iter(self.dataloader_test))
-            bs, len_target = y.shape if y.ndim > 1 else y.unsqueeze(1).shape
-            len_output = self.config["model"]["num_classes"]
-            len_dataset = len(self.dataloader_test.dataset)
-            arr_outputs = torch.empty(len_dataset, len_output)
-            arr_targets = torch.empty(len_dataset, len_target)
-            self.logger.info(f"Saving results to {self.path / filename}")
+        if attack_target is not None:
+            self.logger.info(f"FGSM in targeted mode ({attack_target_name}).")
+            attack_target = attack_target.to(self.device)
+            attack_eps = -attack_eps
+        else:
+            self.logger.info("FGSM in untargeted mode.")
 
         pbar = tqdm(self.dataloader_test, total=len(self.dataloader_test))
         for batch, (inputs, targets) in enumerate(pbar):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
-            # Need to derive wrt to inputs, for this reason batch size must
-            # be reduce in order to fit the data into memory
+            tens_targets = save_targets(batch, targets)
             inputs.requires_grad = True
 
-            outputs = self.model(inputs)
-            loss = self.loss(outputs, targets)
-            self.model.zero_grad()
+            # Evaluate on inputs and Save
+            results = model(inputs)
+            outputs = results["outputs"]
+            features = results["features"]
+            tens_outputs = save_outputs(batch, outputs)
+            tens_features = save_features(batch, features)
+            self.metrics_test(outputs, targets)
+
+            if attack_target is not None:
+                repeat = attack_target.repeat(len(outputs), 1)
+                repeat = repeat.squeeze(1) if len(attack_target) == 1 else repeat
+                loss = self.loss(outputs, repeat)
+            else:
+                loss = self.loss(outputs, targets)
+
+            model.zero_grad()
             loss.backward()
 
-            # x are denormalized inputs
+            # FGSM
             x = self.dataloader_test.denorm(inputs)
-            x_perturbed = attack(x, inputs.grad.data, epsilon)
-            inputs_perturbed = self.dataloader_test.norm(x_perturbed)
+            x_ = x + attack_eps * inputs.grad.data.sign()
+            x_ = torch.clamp(x_, 0, 1)
+            inputs_adv = self.dataloader_test.norm(x_)
 
-            # Evaluate model on perturded inputs
-            outputs_perturbed = self.model(inputs_perturbed)
-            loss = self.loss(outputs, targets)
-            self.metrics_test(outputs_perturbed, targets)
-            self.loss_test(loss)
+            # Evaluate on adversarial inputs and Save
+            results_adv = model(inputs_adv)
+            outputs_adv = results_adv["outputs"]
+            features_adv = results_adv["features"]
+            tens_outputs_adv = save_outputs_adv(batch, outputs_adv)
+            tens_features_adv = save_features_adv(batch, features_adv)
+            self.metrics_test_adv(outputs_adv, targets)
 
-            if save:
-                loc = slice(batch * bs, batch * bs + len(inputs))  # type: ignore
-                targets = targets if targets.ndim > 1 else targets.unsqueeze(1)
-                arr_outputs[loc] = outputs_perturbed.detach().cpu()  # type: ignore
-                arr_targets[loc] = targets.detach().cpu()  # type: ignore
+        np.save(
+            path_results / "targets.npy",
+            tens_targets.numpy(),  # type: ignore
+        )
+        np.save(
+            path_results / "outputs.npy",
+            tens_outputs.numpy(),  # type: ignore
+        )
+        np.save(
+            path_results_adv / f"outputs-{abs(attack_eps):.5f}.npy",
+            tens_outputs_adv.numpy(),  # type: ignore
+        )
+        np.save(
+            path_results / "features.npy",
+            tens_features.numpy(),  # type: ignore
+        )
+        np.save(
+            path_results_adv / f"features-{abs(attack_eps):.5f}.npy",
+            tens_features_adv.numpy(),  # type: ignore
+        )
 
-        metrics_ = {k: v.item() for k, v in self.metrics_test.compute().items()}
-        metrics_["loss"] = self.loss_test.compute().item()
-
-        if save:
-            np.savez_compressed(
-                self.path / filename,
-                outputs=arr_outputs.numpy(),  # type: ignore
-                targets=arr_targets.numpy(),  # type: ignore
-            )
-            self.logger.info(f"Saved results to {self.path / filename}")
-
-        self.logger.info("Attacked completed.")
-        return metrics_
+        return (
+            {k: v.item() for k, v in self.metrics_test.compute().items()},
+            {k: v.item() for k, v in self.metrics_test_adv.compute().items()},
+        )
 
 
 def init(module: object, class_args: dict):
+    class_args = copy.deepcopy(class_args)
     class_name = class_args.pop("class")
     return getattr(module, class_name)(**class_args)
 
@@ -231,26 +217,34 @@ def get_experiements(config: dict, all: bool) -> list[Path]:
         return [experiements[i - 1]]
 
 
-def fgsm(inputs_denorm, inputs_grad, epsilon) -> torch.Tensor:
-    """
-    FGSM attack: very simple, but effective
-    x' = x + eps * sign(dL/dx)
-    """
-    inputs_grad_sign = inputs_grad.sign()
-    inputs_denorm_perturbed = inputs_denorm + epsilon * inputs_grad_sign
-    inputs_denorm_perturbed = torch.clamp(inputs_denorm_perturbed, 0, 1)
-    return inputs_denorm_perturbed
+def get_attack_target(config: dict, idx: int | None) -> tuple[torch.Tensor | None, str]:
+    path_dataset = Path(config["dataloaders"]["test"]["path"]).parent
+
+    with open(path_dataset / "classes" / "classes.txt") as f:
+        classes = [cls.strip() for cls in f.readlines()]
+
+    if idx is None:
+        for i, cls in enumerate(classes, 1):
+            print(f"{i:>4}. {cls}")
+        print("Select a target for FGSM attack. 0 for untargeted attack")
+        idx = int(input("Select target: "))
+
+    if idx == 0:
+        attack_target = None
+        attack_target_name = "_"
+    else:
+        if path_embeddings := config["dataloaders"]["test"].get("path_embeddings"):
+            embedding = np.load(path_embeddings)[idx - 1]
+        else:
+            embedding = np.array([idx - 1])
+        attack_target = torch.from_numpy(embedding)
+        attack_target_name = classes[idx - 1]
+
+    return attack_target, attack_target_name
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description=(
-            "Test model in various ways:\n"
-            "  - classification performance (e.g top 1 accuracy)\n"
-            "  - features extraction\n"
-            "  - against adversarial attack (e.g. fgsm)\n"
-        )
-    )
+    parser = argparse.ArgumentParser()
 
     parser.add_argument(
         "config",
@@ -264,57 +258,38 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--predictions",
-        action="store_true",
-        help="Evaluate predictions metrics and save model output",
-    )
-
-    parser.add_argument(
-        "--features",
-        action="store_true",
-        help="Extract feature from the penultime layer and save",
-    )
-
-    parser.add_argument(
-        "--uattack",
-        action="store_true",
-        help="Perform FGSM untargeted atttack",
-    )
-
-    parser.add_argument(
         "--epsilon",
-        type=float,
         action="store",
+        type=float,
+        required=True,
         help="Epsilon used in the attacks",
     )
 
-    args = parser.parse_args()
+    parser.add_argument(
+        "--target",
+        action="store",
+        type=int,
+        help=(
+            "Class index of target for FGSM attack (1-based). "
+            "Use 0 for untargeted attack"
+        ),
+    )
 
+    args = parser.parse_args()
     config = toml.load(Path(args.config))
+    attack_target, attack_target_name = get_attack_target(config, args.target)
     experiements = get_experiements(config, args.all)
 
     for experiement in experiements:
-        print(f"Testing {experiement.name}")
         tester = Tester(config, experiement.name)
         tester.load(tester.path / "checkpoints" / "accuracy-top-1.pt")
-        print(f"Progress at {tester.path.parent / '*' / 'tester.log'}")
 
-        if args.predictions:
-            print("Predictions ...")
-            results = tester.test(save=False)
-            with open(tester.path / "predictions.json", "w") as json_file:
-                json.dump(results, json_file)
-
-        if args.features:
-            print("Features extraction ...")
-            tester.features_extraction("model.flatten", 1280)
-
-        if args.uattack:
-            print("Untargeted Attack ...")
-            results = tester.attack(attack=fgsm, epsilon=args.epsilon, save=True)
-            filename = f"uattack-eps{args.epsilon:.5f}.json"
-            with open(tester.path / filename, "w") as json_file:
-                json.dump(results, json_file)
-
-        else:
-            print("No testing selected")
+        tester.test(
+            outputs_node="model.classifier.1",
+            outputs_dim=config["model"]["num_classes"],
+            features_node="model.flatten",
+            features_dim=1280,
+            attack_eps=args.epsilon,
+            attack_target=attack_target,
+            attack_target_name=attack_target_name,
+        )
