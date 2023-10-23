@@ -12,21 +12,23 @@ the dataset and return batches of images and their corresponding labels.
 from pathlib import Path
 
 import numpy as np
+import torch
 import torchvision
 from torch.utils.data import DataLoader
 
 
 class CIFAR100TrainDataLoader(DataLoader):
     def __init__(self, path: str, path_embeddings: str = "", **kwargs):
+        mean = torch.tensor([0.4914, 0.4822, 0.4465])
+        std = torch.tensor([0.2023, 0.1994, 0.2010])
+        self.norm = torchvision.transforms.Normalize(mean, std)
+        self.denorm = torchvision.transforms.Normalize(-(mean/std), 1/std)
         transforms = torchvision.transforms.Compose(
             [
                 torchvision.transforms.RandomHorizontalFlip(),
                 torchvision.transforms.Resize(224),
                 torchvision.transforms.ToTensor(),
-                torchvision.transforms.Normalize(
-                    mean=(0.4914, 0.4822, 0.4465),
-                    std=(0.2023, 0.1994, 0.2010),
-                ),
+                self.norm,
             ]
         )
 
@@ -55,14 +57,15 @@ class CIFAR100TrainDataLoader(DataLoader):
 
 class CIFAR100ValDataLoader(DataLoader):
     def __init__(self, path: str, path_embeddings: str = "", **kwargs):
+        mean = torch.tensor([0.4914, 0.4822, 0.4465])
+        std = torch.tensor([0.2023, 0.1994, 0.2010])
+        self.norm = torchvision.transforms.Normalize(mean, std)
+        self.denorm = torchvision.transforms.Normalize(-(mean/std), 1/std)
         transforms = torchvision.transforms.Compose(
             [
                 torchvision.transforms.Resize(224),
                 torchvision.transforms.ToTensor(),
-                torchvision.transforms.Normalize(
-                    mean=(0.4914, 0.4822, 0.4465),
-                    std=(0.2023, 0.1994, 0.2010),
-                ),
+                self.norm,
             ]
         )
 
