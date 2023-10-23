@@ -45,7 +45,7 @@ num_workers = 4
 class = "CIFAR100TestDataLoader"
 path = "datasets/datasets/CIFAR100/inputs"
 path_embeddings = "datasets/datasets/CIFAR100/encodings/mbm/beta5.0.npy"
-batch_size = 64
+batch_size = 32
 num_workers = 4
 
 [metrics.train.accuracy-top-1]

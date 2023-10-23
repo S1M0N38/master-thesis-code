@@ -42,7 +42,7 @@ num_workers = 4
 [dataloaders.test]
 class = "CIFAR100TestDataLoader"
 path = "datasets/datasets/CIFAR100/inputs"
-batch_size = 64
+batch_size = 32 # Reduce batch_size for adversarial attacks
 num_workers = 4
 
 [metrics.train.accuracy-top-1]
