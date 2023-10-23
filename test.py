@@ -1,8 +1,8 @@
-from collections.abc import Callable
-import json
+import argparse
 import copy
+import json
 import logging
-import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
@@ -168,6 +168,7 @@ class Tester:
         metrics_["loss"] = self.loss_test.compute().item()
         return metrics_
 
+
 def init(module: object, class_args: dict):
     class_name = class_args.pop("class")
     return getattr(module, class_name)(**class_args)
@@ -184,28 +185,23 @@ def init_logger(path: Path):
     return logger
 
 
-def get_experiements(config: dict) -> list[Path]:
+def get_experiements(config: dict, all: bool) -> list[Path]:
     experiements = []
-    print("Select experiement to test:")
+    print("Experiments found:")
     for experiement in Path(config["path"]).iterdir():
         if config["name"] in experiement.name:
             experiements.append(experiement)
             print(f"{len(experiements)}. {experiement.name}")
-
     if len(experiements) == 0:
         print("No experiements found.")
         quit()
-
-    if len(experiements) > 1:
-        print("0. All")
-
-    i = int(sys.argv[2]) if len(sys.argv) > 2 else int(input("Select experiement: "))
-    if i == 0:
-        experiements = experiements
+    if all:
+        print("Test all experiments.")
+        return experiements
     else:
-        experiements = [experiements[i - 1]]
+        i = int(input("Select experiement: "))
+        return [experiements[i - 1]]
 
-    return experiements
 
 def fgsm(inputs_denorm, inputs_grad, epsilon) -> torch.Tensor:
     """
@@ -219,26 +215,78 @@ def fgsm(inputs_denorm, inputs_grad, epsilon) -> torch.Tensor:
 
 
 if __name__ == "__main__":
-    config = toml.load(Path(sys.argv[1]))
-    experiements = get_experiements(config)
+    parser = argparse.ArgumentParser(
+        description=(
+            "Test model in various ways:\n"
+            "  - classification performance (e.g top 1 accuracy)\n"
+            "  - features extraction\n"
+            "  - against adversarial attack (e.g. fgsm)\n"
+        )
+    )
+
+    parser.add_argument(
+        "config",
+        help="TOML configuration for the model",
+    )
+
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Run tests for all experiments with the same config",
+    )
+
+    parser.add_argument(
+        "--predictions",
+        action="store_true",
+        help="Evaluate predictions metrics and save model output",
+    )
+
+    parser.add_argument(
+        "--features",
+        action="store_true",
+        help="Extract feature from the penultime layer and save",
+    )
+
+    parser.add_argument(
+        "--uattack",
+        action="store_true",
+        help="Perform FGSM untargeted atttack",
+    )
+
+    parser.add_argument(
+        "--epsilon",
+        type=float,
+        action="store",
+        help="Epsilon used in the attacks",
+    )
+
+    args = parser.parse_args()
+
+    config = toml.load(Path(args.config))
+    experiements = get_experiements(config, args.all)
 
     for experiement in experiements:
         print(f"Testing {experiement.name}")
         tester = Tester(config, experiement.name)
         tester.load(tester.path / "checkpoints" / "accuracy-top-1.pt")
-
-        # print(f"Progress at {tester.path.parent / '*' / 'tester.log'}")
-        # print("Features extraction ...")
-        # tester.features_extraction("model.flatten", 1280)
-
         print(f"Progress at {tester.path.parent / '*' / 'tester.log'}")
-        print("Testing ...")
-        results = tester.test(save=False)
-        with open(tester.path / "classification_metrics.json", "w") as json_file:
-            json.dump(results, json_file)
 
-        print(f"Progress at {tester.path.parent / '*' / 'tester.log'}")
-        print("Attack ...")
-        results = tester.attack(attack=fgsm, epsilon=0.001)
-        with open(tester.path / "adversarial_metrics.json", "w") as json_file:
-            json.dump(results, json_file)
+        if args.predictions:
+            print("Predictions ...")
+            results = tester.test(save=False)
+            with open(tester.path / "predictions.json", "w") as json_file:
+                json.dump(results, json_file)
+
+        if args.features:
+            print("Features extraction ...")
+            tester.features_extraction("model.flatten", 1280)
+
+        if args.uattack:
+            print("Untargeted Attack ...")
+            results = tester.attack(attack=fgsm, epsilon=args.epsilon)
+            filename = f"uattack-eps{args.epsilon:.5f}.json"
+            with open(tester.path / filename, "w") as json_file:
+                json.dump(results, json_file)
+
+        else:
+            print("No testing selected")
