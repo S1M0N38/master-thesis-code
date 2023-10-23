@@ -89,8 +89,8 @@ class Tester:
                     targets = targets if targets.ndim > 1 else targets.unsqueeze(1)
                     arr_outputs[loc] = outputs  # type: ignore
                     arr_targets[loc] = targets  # type: ignore
-
             metrics_ = {k: v.item() for k, v in self.metrics_test.compute().items()}
+
             metrics_["loss"] = self.loss_test.compute().item()
 
         if save:
@@ -135,14 +135,26 @@ class Tester:
         self.logger.info(f"Saved results to {self.path / 'features_targets.npz'}")
         self.logger.info("Features extractions completed.")
 
-    def attack(self, attack: Callable, epsilon: float) -> dict[str, float]:
+    def attack(
+        self, attack: Callable, epsilon: float, save: bool = False
+    ) -> dict[str, float]:
         self.model = self.model.eval()
         self.metrics_test.reset()
         self.loss_test.reset()
         self.logger.info("Starting attack.")
 
+        filename = f"uattack-eps{epsilon:.5f}_targets.npz"
+        if save:
+            _, y = next(iter(self.dataloader_test))
+            bs, len_target = y.shape if y.ndim > 1 else y.unsqueeze(1).shape
+            len_output = self.config["model"]["num_classes"]
+            len_dataset = len(self.dataloader_test.dataset)
+            arr_outputs = torch.empty(len_dataset, len_output)
+            arr_targets = torch.empty(len_dataset, len_target)
+            self.logger.info(f"Saving results to {self.path / filename}")
+
         pbar = tqdm(self.dataloader_test, total=len(self.dataloader_test))
-        for inputs, targets in pbar:
+        for batch, (inputs, targets) in enumerate(pbar):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             # Need to derive wrt to inputs, for this reason batch size must
             # be reduce in order to fit the data into memory
@@ -164,8 +176,24 @@ class Tester:
             self.metrics_test(outputs_perturbed, targets)
             self.loss_test(loss)
 
+            if save:
+                loc = slice(batch * bs, batch * bs + len(inputs))  # type: ignore
+                targets = targets if targets.ndim > 1 else targets.unsqueeze(1)
+                arr_outputs[loc] = outputs_perturbed.detach().cpu()  # type: ignore
+                arr_targets[loc] = targets.detach().cpu()  # type: ignore
+
         metrics_ = {k: v.item() for k, v in self.metrics_test.compute().items()}
         metrics_["loss"] = self.loss_test.compute().item()
+
+        if save:
+            np.savez_compressed(
+                self.path / filename,
+                outputs=arr_outputs.numpy(),  # type: ignore
+                targets=arr_targets.numpy(),  # type: ignore
+            )
+            self.logger.info(f"Saved results to {self.path / filename}")
+
+        self.logger.info("Attacked completed.")
         return metrics_
 
 
@@ -283,7 +311,7 @@ if __name__ == "__main__":
 
         if args.uattack:
             print("Untargeted Attack ...")
-            results = tester.attack(attack=fgsm, epsilon=args.epsilon)
+            results = tester.attack(attack=fgsm, epsilon=args.epsilon, save=True)
             filename = f"uattack-eps{args.epsilon:.5f}.json"
             with open(tester.path / filename, "w") as json_file:
                 json.dump(results, json_file)
