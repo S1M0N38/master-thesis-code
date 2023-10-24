@@ -46,7 +46,7 @@ num_workers = 4
 class = "INaturalist19TestDataLoader"
 path = "datasets/datasets/iNaturalist19/inputs/test"
 path_embeddings = "datasets/datasets/iNaturalist19/encodings/b3p/beta0.5.npy"
-batch_size = 64
+batch_size = 32
 num_workers = 4
 
 [metrics.train.accuracy-top-1]

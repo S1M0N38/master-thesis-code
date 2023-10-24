@@ -43,7 +43,7 @@ num_workers = 4
 [dataloaders.test]
 class = "INaturalist19TestDataLoader"
 path = "datasets/datasets/iNaturalist19/inputs/test"
-batch_size = 64
+batch_size = 32
 num_workers = 4
 
 [metrics.train.accuracy-top-1]
