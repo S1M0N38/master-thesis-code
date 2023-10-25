@@ -4,7 +4,6 @@ import logging
 from pathlib import Path
 
 import numpy as np
-from pandas.io.pytables import attribute_conflict_doc
 import toml
 import torch
 import torchmetrics
