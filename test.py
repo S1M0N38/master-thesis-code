@@ -243,7 +243,14 @@ def get_attack_target(config: dict, idx: int | None) -> tuple[torch.Tensor | Non
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description=(
+            "Test model on test dataset in various way:"
+            "- features extraction and model output"
+            "- features extraction and model output with FGSM untargeted"
+            "- features extraction and model output with FGSM targeted"
+        )
+    )
 
     parser.add_argument(
         "config",
@@ -282,6 +289,8 @@ if __name__ == "__main__":
     for experiement in experiements:
         tester = Tester(config, experiement.name)
         tester.load(tester.path / "checkpoints" / "accuracy-top-1.pt")
+        print(f"Progress at {tester.path.parent / '*' / 'trainer.log'}")
+        print("Testing ...")
 
         tester.test(
             outputs_node="model.classifier.1",
