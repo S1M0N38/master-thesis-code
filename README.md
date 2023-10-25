@@ -20,7 +20,7 @@ thesis](https://github.com/S1M0N38/master-thesis). I find useful to have access
 to the code to check the implementation describe by scientific papers, so here
 it is.
 
-# Installation
+## Installation
 
 1. Clone the repository and its submodule `datasets` [^1]
 ```bash
@@ -72,3 +72,108 @@ ln -s path/to/cifar-100-python datasets/datasets/CIFAR100/inputs/cifar-100-pytho
 
 [^1]: Alternatively, you can git clone
 `https://github.com/S1M0N38/master-thesis-datasets` and create symbolic link
+
+
+## Usage
+
+The entire pipeline consists of the following steps:
+1. Train the model
+2. Test the model
+3. Evaluate testing results
+4. Visualize results
+
+### 1. Train
+
+<!-- TODO: add GPU model -->
+Training step require at least one GPU (mine was ...) because do it on CPU
+it's unbearably slow.
+Assuming that you have activated the virtual environment you can train a model
+using a configuration file with:
+
+```bash
+python "train.py" "configs/CIFAR100/xe-onehot.toml"
+# This train a EfficientNetB0 using CrossEntropy and onehot encoding
+# on CIFAR100 dataset. Use other .toml file in configs or define your own
+```
+
+Everything about training is define in the `TOML` configuration file, whose
+key/values are used to dynamically initialize model, dataloaders, metrics, etc.
+(This project is based on [[🔥](https://github.com/S1M0N38/pytorch-template)]
+template, so take a look at that to understand how it works under the hood)
+
+If training successfully started, a new directory is created inside
+`experiments/CIFAR100` with the following naming scheme:
+```
+{MONTHDAY}_{HOURMINUTE}_{CONFIGHASH}_{NAME}
+```
+- The first part it's contains date and time so it's easy to sort various
+experiments by creation time.
+- `CONFIGHASH` is the hash of the configuration file so it's easy to quickly
+group different experiments with exactly the same configuration.
+- `NAME` is the name of the experiment define in the TOML file with the key
+`name`.
+
+For example
+
+```
+0707_1458_8bc6fb3e_xe-onehot
+├── checkpoints
+│  └── ...
+├── runs
+│  └── events.out.tfevents.1688741895.hostname.localhost.3233031.0
+├── config.toml
+└── trainer.log
+```
+
+where `config.toml` contains a copy of the configuration file specify
+in the previous command.
+
+You can track the training progress by
+- following the log file: `tail -f experiments/CIFAR100/*/trainer.log `
+- using [TensorBoard](https://www.tensorflow.org/tensorboard): `tensorboard --logdir experiments/CIFAR100/`
+
+Model's checkpoints (model graph and weights) will be save inside `checkpoints`.
+In the next step these checkpoints will be used to load the trained model in
+memory.
+
+### 2. Test
+
+After trained the model we want to test it, i.e. run the test dataset through
+the model and store results. For testing you still need GPU.
+The testing script will:
+- Save model output
+- Save features extracted from penultimate level
+- Perform [FGSM](https://arxiv.org/abs/1412.6572#) attack (targeted or untargeted)
+- Save model output and features produced by the adversarial inputs
+
+```bash
+python "test.py" "configs/CIFAR100/xe-onehot.toml" --epsilon 0.001
+```
+
+This will search for all experiments in `experiments` that were trained using
+`configs/CIFAR100/xe-onehot.toml` as configuration file and invite the user to
+choose one. Then it will ask for the target of adversarial attack (suppose we
+choose `apple` as target).
+
+After testing the experiment folder should contains a new directory named
+`results`.
+
+```
+0707_1458_8bc6fb3e_xe-onehot
+├── results
+│  ├── apple
+│  │  ├── features-0.00100.npy
+│  │  └── outputs-0.00100.npy
+│  ├── features.npy
+│  ├── outputs.npy
+│  └── targets.npy
+└── ...
+```
+
+- `targets.npy` is simply a numpy array containing the `y` of the test dataset
+(in the case of onehot encoding its value are simply integer number).
+- `outpus.npy` ans `features.npy` respectively contains the model outputs and
+features obtained by feeding the model with the images from datasets.
+- `{TARGET}/features-{EPSILON}.npy` and `{TARGET}/features-{EPSILON}.npy`
+are the model's outputs and features in the case of the adversarial attack.
+If the attack was untargeted, `{TARGET}` is `_`.
