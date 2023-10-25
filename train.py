@@ -1,7 +1,6 @@
 import copy
 import logging
 import sys
-import test
 from datetime import datetime
 from hashlib import sha256
 from pathlib import Path
