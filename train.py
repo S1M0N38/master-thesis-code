@@ -265,17 +265,3 @@ if __name__ == "__main__":
     print(f"Progress at {trainer.path.parent / '*' / 'trainer.log'}")
     print("Training ...")
     trainer.train()
-
-    # After training, perform features extraction and test predictions accuracy
-
-    tester = test.Tester(config, experiement)
-    tester.load(tester.path / "checkpoints" / "accuracy-top-1.pt")
-
-    print(f"Progress at {tester.path.parent / '*' / 'tester.log'}")
-    print("Features extraction ...")
-    tester.features_extraction("model.flatten", 1280)
-
-    print(f"Progress at {tester.path.parent / '*' / 'tester.log'}")
-    print("Testing ...")
-    results = tester.test(save=True)
-    print(results)
