@@ -13,21 +13,23 @@ pre-calculated values specific to the iNaturalist 2019 dataset.
 from pathlib import Path
 
 import numpy as np
+import torch
 import torchvision
 from torch.utils.data import DataLoader
 
 
 class INaturalist19TrainDataLoader(DataLoader):
     def __init__(self, path: str, path_embeddings: str = "", **kwargs):
+        mean = torch.tensor([0.454, 0.474, 0.367])
+        std = torch.tensor([0.237, 0.230, 0.249])
+        self.norm = torchvision.transforms.Normalize(mean, std)
+        self.denorm = torchvision.transforms.Normalize(-(mean / std), 1 / std)
         transforms = torchvision.transforms.Compose(
             [
                 torchvision.transforms.RandomResizedCrop(224),
                 torchvision.transforms.RandomHorizontalFlip(),
                 torchvision.transforms.ToTensor(),
-                torchvision.transforms.Normalize(
-                    mean=(0.454, 0.474, 0.367),
-                    std=(0.237, 0.230, 0.249),
-                ),
+                self.norm,
             ]
         )
         if path_embeddings:
@@ -52,13 +54,14 @@ class INaturalist19TrainDataLoader(DataLoader):
 
 class INaturalist19ValDataLoader(DataLoader):
     def __init__(self, path: str, path_embeddings: str = "", **kwargs):
+        mean = torch.tensor([0.454, 0.474, 0.367])
+        std = torch.tensor([0.237, 0.230, 0.249])
+        self.norm = torchvision.transforms.Normalize(mean, std)
+        self.denorm = torchvision.transforms.Normalize(-(mean / std), 1 / std)
         transforms = torchvision.transforms.Compose(
             [
                 torchvision.transforms.ToTensor(),
-                torchvision.transforms.Normalize(
-                    mean=(0.454, 0.474, 0.367),
-                    std=(0.237, 0.230, 0.249),
-                ),
+                self.norm,
             ]
         )
         if path_embeddings:
@@ -82,13 +85,14 @@ class INaturalist19ValDataLoader(DataLoader):
 
 class INaturalist19TestDataLoader(DataLoader):
     def __init__(self, path: str, path_embeddings: str = "", **kwargs):
+        mean = torch.tensor([0.454, 0.474, 0.367])
+        std = torch.tensor([0.237, 0.230, 0.249])
+        self.norm = torchvision.transforms.Normalize(mean, std)
+        self.denorm = torchvision.transforms.Normalize(-(mean / std), 1 / std)
         transforms = torchvision.transforms.Compose(
             [
                 torchvision.transforms.ToTensor(),
-                torchvision.transforms.Normalize(
-                    mean=(0.454, 0.474, 0.367),
-                    std=(0.237, 0.230, 0.249),
-                ),
+                self.norm,
             ]
         )
         if path_embeddings:
