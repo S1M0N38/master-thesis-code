@@ -22,7 +22,7 @@ class CIFAR100TrainDataLoader(DataLoader):
         mean = torch.tensor([0.4914, 0.4822, 0.4465])
         std = torch.tensor([0.2023, 0.1994, 0.2010])
         self.norm = torchvision.transforms.Normalize(mean, std)
-        self.denorm = torchvision.transforms.Normalize(-(mean/std), 1/std)
+        self.denorm = torchvision.transforms.Normalize(-(mean / std), 1 / std)
         transforms = torchvision.transforms.Compose(
             [
                 torchvision.transforms.RandomHorizontalFlip(),
@@ -60,7 +60,7 @@ class CIFAR100ValDataLoader(DataLoader):
         mean = torch.tensor([0.4914, 0.4822, 0.4465])
         std = torch.tensor([0.2023, 0.1994, 0.2010])
         self.norm = torchvision.transforms.Normalize(mean, std)
-        self.denorm = torchvision.transforms.Normalize(-(mean/std), 1/std)
+        self.denorm = torchvision.transforms.Normalize(-(mean / std), 1 / std)
         transforms = torchvision.transforms.Compose(
             [
                 torchvision.transforms.Resize(224),
