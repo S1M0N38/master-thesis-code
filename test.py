@@ -175,7 +175,7 @@ class Tester:
             tens_outputs.numpy(),  # type: ignore
         )
         np.save(
-            path_results_adv / f"outputs-{abs(attack_eps):.5f}.npy",
+            path_results_adv / f"outputs-{abs(attack_eps):.8f}.npy",
             tens_outputs_adv.numpy(),  # type: ignore
         )
         if extract_features:
@@ -184,7 +184,7 @@ class Tester:
                 tens_features.numpy(),  # type: ignore
             )
             np.save(
-                path_results_adv / f"features-{abs(attack_eps):.5f}.npy",
+                path_results_adv / f"features-{abs(attack_eps):.8f}.npy",
                 tens_features_adv.numpy(),  # type: ignore
             )
 
