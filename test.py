@@ -211,22 +211,25 @@ def init_logger(path: Path):
     return logger
 
 
-def get_experiements(config: dict, all: bool) -> list[Path]:
-    experiements = []
-    print("Experiments found:")
-    for experiement in Path(config["path"]).iterdir():
-        if config["name"] in experiement.name:
-            experiements.append(experiement)
-            print(f"{len(experiements)}. {experiement.name}")
-    if len(experiements) == 0:
-        print("No experiements found.")
+def get_experiments(config: dict, idx: int | None) -> list[Path]:
+    experiments = []
+    for experiment in Path(config["path"]).iterdir():
+        if config["name"] in experiment.name:
+            experiments.append(experiment)
+    if len(experiments) == 0:
+        print("No experiments found.")
         quit()
-    if all:
-        print("Test all experiments.")
-        return experiements
+
+    if idx is None:
+        for i, experiment in enumerate(experiments, 1):
+            print(f"{i}. {experiment}")
+        print("Select an experiment. 0 for use all experiments")
+        idx = int(input("Select target: "))
+
+    if idx == 0:
+        return experiments
     else:
-        i = int(input("Select experiement: "))
-        return [experiements[i - 1]]
+        return [experiments[idx - 1]]
 
 
 def get_attack_target(config: dict, idx: int | None) -> tuple[torch.Tensor | None, str]:
@@ -264,9 +267,13 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--all",
-        action="store_true",
-        help="Run tests for all experiments with the same config",
+        "--experiment",
+        action="store",
+        type=int,
+        help=(
+            "Choose which experiment to run (1-based). "
+            "Use 0 to run all experiments with the same config."
+        ),
     )
 
     parser.add_argument(
@@ -296,10 +303,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     config = toml.load(Path(args.config))
     attack_target, attack_target_name = get_attack_target(config, args.target)
-    experiements = get_experiements(config, args.all)
+    experiments = get_experiments(config, args.experiment)
 
-    for experiement in experiements:
-        tester = Tester(config, experiement.name)
+    for experiment in experiments:
+        tester = Tester(config, experiment.name)
         tester.load(tester.path / "checkpoints" / "accuracy-top-1.pt")
         print(f"Progress at {tester.path.parent / '*' / 'trainer.log'}")
         print("Testing ...")
