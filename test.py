@@ -83,6 +83,7 @@ class Tester:
         self,
         outputs_node: str,
         outputs_dim: int,
+        extract_features: str,
         features_node: str,
         features_dim: int,
         attack_eps: float,
@@ -95,9 +96,7 @@ class Tester:
         self.logger.info("Start testing.")
 
         save_outputs, *_, targets_dim = self._save_batch(outputs_dim)
-        save_features, *_ = self._save_batch(features_dim)
         save_outputs_adv, *_ = self._save_batch(outputs_dim)
-        save_features_adv, *_ = self._save_batch(features_dim)
         save_targets, *_ = self._save_batch(targets_dim)
 
         path_results = self.path / "results"
@@ -105,8 +104,14 @@ class Tester:
         path_results.mkdir(exist_ok=True)
         path_results_adv.mkdir(exist_ok=True)
 
-        return_nodes = {outputs_node: "outputs", features_node: "features"}
-        model = create_feature_extractor(self.model, return_nodes=return_nodes)
+        if extract_features:
+            save_features, *_ = self._save_batch(features_dim)
+            save_features_adv, *_ = self._save_batch(features_dim)
+            return_nodes = {outputs_node: "outputs", features_node: "features"}
+            model = create_feature_extractor(self.model, return_nodes=return_nodes)
+        else:
+            model = self.model
+
         model.eval()
 
         if attack_target is not None:
@@ -124,12 +129,16 @@ class Tester:
 
             # Evaluate on inputs and Save
             results = model(inputs)
-            outputs = results["outputs"]
-            features = results["features"]
+            if extract_features:
+                outputs = results["outputs"]
+                features = results["features"]
+                tens_features = save_features(batch, features)  # type: ignore
+            else:
+                outputs = results
             tens_outputs = save_outputs(batch, outputs)
-            tens_features = save_features(batch, features)
             self.metrics_test(outputs, targets)
 
+            # Set the loss to optimize for in adversarial attack
             if attack_target is not None:
                 repeat = attack_target.repeat(len(outputs), 1)
                 repeat = repeat.squeeze(1) if len(attack_target) == 1 else repeat
@@ -148,10 +157,13 @@ class Tester:
 
             # Evaluate on adversarial inputs and Save
             results_adv = model(inputs_adv)
-            outputs_adv = results_adv["outputs"]
-            features_adv = results_adv["features"]
+            if extract_features:
+                outputs_adv = results_adv["outputs"]
+                features_adv = results_adv["features"]
+                tens_features_adv = save_features_adv(batch, features_adv)  # type: ignore
+            else:
+                outputs_adv = results_adv
             tens_outputs_adv = save_outputs_adv(batch, outputs_adv)
-            tens_features_adv = save_features_adv(batch, features_adv)
             self.metrics_test_adv(outputs_adv, targets)
 
         np.save(
@@ -166,14 +178,15 @@ class Tester:
             path_results_adv / f"outputs-{abs(attack_eps):.5f}.npy",
             tens_outputs_adv.numpy(),  # type: ignore
         )
-        np.save(
-            path_results / "features.npy",
-            tens_features.numpy(),  # type: ignore
-        )
-        np.save(
-            path_results_adv / f"features-{abs(attack_eps):.5f}.npy",
-            tens_features_adv.numpy(),  # type: ignore
-        )
+        if extract_features:
+            np.save(
+                path_results / "features.npy",
+                tens_features.numpy(),  # type: ignore
+            )
+            np.save(
+                path_results_adv / f"features-{abs(attack_eps):.5f}.npy",
+                tens_features_adv.numpy(),  # type: ignore
+            )
 
         return (
             {k: v.item() for k, v in self.metrics_test.compute().items()},
@@ -243,14 +256,7 @@ def get_attack_target(config: dict, idx: int | None) -> tuple[torch.Tensor | Non
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description=(
-            "Test model on test dataset in various way:"
-            "- features extraction and model output"
-            "- features extraction and model output with FGSM untargeted"
-            "- features extraction and model output with FGSM targeted"
-        )
-    )
+    parser = argparse.ArgumentParser(description="Test model on test dataset")
 
     parser.add_argument(
         "config",
@@ -261,6 +267,12 @@ if __name__ == "__main__":
         "--all",
         action="store_true",
         help="Run tests for all experiments with the same config",
+    )
+
+    parser.add_argument(
+        "--features",
+        action="store_true",
+        help="Extract features vectors and save them",
     )
 
     parser.add_argument(
@@ -295,6 +307,7 @@ if __name__ == "__main__":
         tester.test(
             outputs_node="model.classifier.1",
             outputs_dim=config["model"]["num_classes"],
+            extract_features=args.features,
             features_node="model.flatten",
             features_dim=1280,
             attack_eps=args.epsilon,
