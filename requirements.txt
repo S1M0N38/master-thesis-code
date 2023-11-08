@@ -10,3 +10,4 @@ matplotlib
 scikit-learn
 s-dbw
 ipykernel
+ipywidgets
