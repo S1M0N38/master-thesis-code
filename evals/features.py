@@ -40,6 +40,7 @@ path_encoding = args.path_encoding
 dataset, exp = path_experiment.parts[-2:]
 path_root = Path(__file__).parent.parent
 path_dataset = path_root / "datasets" / "datasets" / dataset
+path_save = path_root / "evals" / dataset / exp / "results" / "features.pkl"
 hierarchy = np.load(path_dataset / "hierarchy" / "hierarchy.npy")
 metrics = {
     "silhouette": silhouette_score,
@@ -47,6 +48,9 @@ metrics = {
     "davies_bouldin": davies_bouldin_score,
     "sdbw": sdbw_score,
 }
+
+if path_save.exists():
+    quit()
 
 # Dataframe
 index = pd.Index(data=[exp], dtype=str, name="experiments")
@@ -76,7 +80,6 @@ for lvl in pb_levels:
         df.loc[exp, (lvl, metric)] = func(features, hierarchy[lvl][labels])
 
 # Save Dataframe
-path_save = path_root / "evals" / dataset / exp / "results" / "features.pkl"
 path_save.parent.parent.mkdir(exist_ok=True)
 path_save.parent.mkdir(exist_ok=True)
 df.to_pickle(path_save)
