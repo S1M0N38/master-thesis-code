@@ -209,7 +209,12 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/macos,python
 
 *.pdf
+*-old/
 experiments/
 notebooks/results/
 sync.sh
 tricks.md
+
+evals/CIFAR100
+evals/iNaturalist19
+evals/tieredImageNet
