@@ -11,6 +11,8 @@ from sklearn.metrics import (
 )
 import tqdm
 
+import utils
+
 # Argparse
 parser = argparse.ArgumentParser(
     description="Compute features metrics and save to results/features.pkl"
@@ -60,15 +62,9 @@ df = pd.DataFrame(index=index, columns=columns, dtype=float)
 
 # Data
 features = np.load(path_experiment / "results" / "features.npy")
-outputs = np.load(path_experiment / "results" / "outputs.npy")
+targets = np.load(path_experiment / "results" / "targets.npy")
 encodings = np.load(path_encoding)
-
-# From outputs to labels
-if outputs.shape[-1] == 1:
-    outputs = np.eye(hierarchy.shape[-1])[outputs.squeeze().astype(int)]
-outputs /= np.linalg.norm(outputs, axis=1, keepdims=True)
-encodings /= np.linalg.norm(encodings, axis=1, keepdims=True)
-labels = (outputs @ encodings.T).argmax(axis=-1)
+labels = utils.get_labels(targets, encodings)
 
 # Calculate metrics
 pb_levels = tqdm.tqdm(levels)
