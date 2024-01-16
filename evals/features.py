@@ -80,6 +80,5 @@ for lvl in pb_levels:
         df.loc[exp, (lvl, metric)] = func(features, hierarchy[lvl][labels])
 
 # Save Dataframe
-path_save.parent.parent.mkdir(exist_ok=True)
-path_save.parent.mkdir(exist_ok=True)
+path_save.parent.mkdir(exist_ok=True, parents=True)
 df.to_pickle(path_save)
