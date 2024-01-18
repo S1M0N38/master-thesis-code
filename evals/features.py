@@ -1,17 +1,6 @@
 from pathlib import Path
 import argparse
 
-import numpy as np
-import pandas as pd
-from s_dbw import S_Dbw as sdbw_score
-from sklearn.metrics import (
-    calinski_harabasz_score,
-    davies_bouldin_score,
-    silhouette_score,
-)
-import tqdm
-
-import utils
 
 # Argparse
 parser = argparse.ArgumentParser(
@@ -43,6 +32,25 @@ dataset, exp = path_experiment.parts[-2:]
 path_root = Path(__file__).parent.parent
 path_dataset = path_root / "datasets" / "datasets" / dataset
 path_save = path_root / "evals" / dataset / exp / "results" / "features.pkl"
+
+if path_save.exists():
+    print(f"SKIP: {path_save} already exists")
+    quit()
+
+
+import numpy as np
+import pandas as pd
+from s_dbw import S_Dbw as sdbw_score
+from sklearn.metrics import (
+    calinski_harabasz_score,
+    davies_bouldin_score,
+    silhouette_score,
+)
+import tqdm
+
+import utils
+
+
 hierarchy = np.load(path_dataset / "hierarchy" / "hierarchy.npy")
 metrics = {
     "silhouette": silhouette_score,
@@ -50,9 +58,6 @@ metrics = {
     "davies_bouldin": davies_bouldin_score,
     "sdbw": sdbw_score,
 }
-
-if path_save.exists():
-    quit()
 
 # Dataframe
 index = pd.Index(data=[exp], dtype=str, name="experiments")
