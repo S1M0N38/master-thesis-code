@@ -56,8 +56,8 @@ path_hierarchy = path_dataset / "hierarchy" / "hierarchy.npy"
 filename = (
     f"projections_"
     f"{args.umap_n_neighbors:04}_"
-    f"{args.umap_min_dist:.2f}"
-    f"{'_supervised' if args.umap_supervised else ''}.npy"
+    f"{args.umap_min_dist:.2f}_"
+    f"{'supervised' if args.umap_supervised else 'unsupervised'}.npy"
 )
 
 path_save = path_root / "evals" / dataset / exp / "results" / filename
