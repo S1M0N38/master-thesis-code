@@ -174,6 +174,11 @@ class Trainer:
     def _load(self):
         raise NotImplementedError("This method is not implemented yet.")
 
+    def load(self, path: Path):
+        checkpoint = torch.load(path.resolve())
+        self.model.load_state_dict(checkpoint["model"])
+        return self
+
     def train(self):
         self.start_time = datetime.now()
 
@@ -257,9 +262,12 @@ def generate_experiment_name(config: dict):
 
 if __name__ == "__main__":
     config = toml.load(Path(sys.argv[1]))
+    checkoint = Path(sys.argv[2]) if len(sys.argv) > 2 else None
     experiement = generate_experiment_name(config)
 
     trainer = Trainer(config, experiement)
+    if checkoint:
+        trainer.load(checkoint)
     print(trainer)
     print(f"Progress at {trainer.path.parent / '*' / 'trainer.log'}")
     print("Training ...")
