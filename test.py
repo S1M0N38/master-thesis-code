@@ -15,6 +15,20 @@ import losses
 import metrics
 import models
 
+# Workaround to avoid error when loading weights
+# https://github.com/pytorch/vision/issues/7744#issuecomment-1757321451
+from torchvision.models._api import WeightsEnum
+from torch.hub import load_state_dict_from_url
+
+
+def get_state_dict(self, *args, **kwargs):
+    kwargs.pop("check_hash")
+    return load_state_dict_from_url(self.url, *args, **kwargs)
+
+
+WeightsEnum.get_state_dict = get_state_dict
+# End workaround
+
 
 class Tester:
     def __init__(self, config: dict, experiemnt: str) -> None:
@@ -86,7 +100,7 @@ class Tester:
         extract_features: str,
         features_node: str,
         features_dim: int,
-        attack_eps: float,
+        attack_eps: float | None = None,
         attack_target: torch.Tensor | None = None,
         attack_target_name: str = "_",
     ):
@@ -96,13 +110,15 @@ class Tester:
         self.logger.info("Start testing.")
 
         save_outputs, *_, targets_dim = self._save_batch(outputs_dim)
-        save_outputs_adv, *_ = self._save_batch(outputs_dim)
         save_targets, *_ = self._save_batch(targets_dim)
 
         path_results = self.path / "results"
-        path_results_adv = self.path / "results" / attack_target_name
         path_results.mkdir(exist_ok=True)
-        path_results_adv.mkdir(exist_ok=True)
+
+        if attack_eps is not None:
+            save_outputs_adv, *_ = self._save_batch(outputs_dim)
+            path_results_adv = self.path / "results" / attack_target_name
+            path_results_adv.mkdir(exist_ok=True)
 
         if extract_features:
             save_features, *_ = self._save_batch(features_dim)
@@ -114,18 +130,23 @@ class Tester:
 
         model.eval()
 
-        if attack_target is not None:
-            self.logger.info(f"FGSM in targeted mode ({attack_target_name}).")
-            attack_target = attack_target.to(self.device)
-            attack_eps = -attack_eps
+        if attack_eps is not None:
+            if attack_target is not None:
+                self.logger.info(f"FGSM in targeted mode ({attack_target_name}).")
+                attack_target = attack_target.to(self.device)
+                attack_eps = -attack_eps
+            else:
+                self.logger.info("FGSM in untargeted mode.")
         else:
-            self.logger.info("FGSM in untargeted mode.")
+            self.logger.info("No attack.")
 
         pbar = tqdm(self.dataloader_test, total=len(self.dataloader_test))
         for batch, (inputs, targets) in enumerate(pbar):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             tens_targets = save_targets(batch, targets)
-            inputs.requires_grad = True
+
+            if attack_eps is not None:
+                inputs.requires_grad = True
 
             # Evaluate on inputs and Save
             results = model(inputs)
@@ -139,32 +160,34 @@ class Tester:
             self.metrics_test(outputs, targets)
 
             # Set the loss to optimize for in adversarial attack
-            if attack_target is not None:
-                repeat = attack_target.repeat(len(outputs), 1)
-                repeat = repeat.squeeze(1) if len(attack_target) == 1 else repeat
-                loss = self.loss(outputs, repeat)
-            else:
-                loss = self.loss(outputs, targets)
+            if attack_eps is not None:
+                if attack_target is not None:
+                    repeat = attack_target.repeat(len(outputs), 1)
+                    repeat = repeat.squeeze(1) if len(attack_target) == 1 else repeat
+                    loss = self.loss(outputs, repeat)
+                else:
+                    loss = self.loss(outputs, targets)
 
-            model.zero_grad()
-            loss.backward()
+                model.zero_grad()
+                loss.backward()
 
-            # FGSM
-            x = self.dataloader_test.denorm(inputs)
-            x_ = x + attack_eps * inputs.grad.data.sign()
-            x_ = torch.clamp(x_, 0, 1)
-            inputs_adv = self.dataloader_test.norm(x_)
+                # FGSM
+                x = self.dataloader_test.denorm(inputs)
+                x_ = x + attack_eps * inputs.grad.data.sign()
+                x_ = torch.clamp(x_, 0, 1)
+                inputs_adv = self.dataloader_test.norm(x_)
 
-            # Evaluate on adversarial inputs and Save
-            results_adv = model(inputs_adv)
-            if extract_features:
-                outputs_adv = results_adv["outputs"]
-                features_adv = results_adv["features"]
-                tens_features_adv = save_features_adv(batch, features_adv)  # type: ignore
-            else:
-                outputs_adv = results_adv
-            tens_outputs_adv = save_outputs_adv(batch, outputs_adv)
-            self.metrics_test_adv(outputs_adv, targets)
+                # Evaluate on adversarial inputs and Save
+                results_adv = model(inputs_adv)
+                if extract_features:
+                    outputs_adv = results_adv["outputs"]
+                    features_adv = results_adv["features"]
+                    tens_features_adv = save_features_adv(batch, features_adv)  # type: ignore
+                else:
+                    outputs_adv = results_adv
+
+                tens_outputs_adv = save_outputs_adv(batch, outputs_adv)  # type: ignore
+                self.metrics_test_adv(outputs_adv, targets)
 
         np.save(
             path_results / "targets.npy",
@@ -174,24 +197,29 @@ class Tester:
             path_results / "outputs.npy",
             tens_outputs.numpy(),  # type: ignore
         )
-        np.save(
-            path_results_adv / f"outputs-{abs(attack_eps):.8f}.npy",
-            tens_outputs_adv.numpy(),  # type: ignore
-        )
+        if attack_eps is not None:
+            np.save(
+                path_results_adv / f"outputs-{abs(attack_eps):.8f}.npy",  # type: ignore
+                tens_outputs_adv.numpy(),  # type: ignore
+            )
+            if extract_features:
+                np.save(
+                    path_results_adv / f"features-{abs(attack_eps):.8f}.npy",  # type: ignore
+                    tens_features_adv.numpy(),  # type: ignore
+                )
         if extract_features:
             np.save(
                 path_results / "features.npy",
                 tens_features.numpy(),  # type: ignore
             )
-            np.save(
-                path_results_adv / f"features-{abs(attack_eps):.8f}.npy",
-                tens_features_adv.numpy(),  # type: ignore
+
+        if attack_eps is not None:
+            return (
+                {k: v.item() for k, v in self.metrics_test.compute().items()},
+                {k: v.item() for k, v in self.metrics_test_adv.compute().items()},
             )
 
-        return (
-            {k: v.item() for k, v in self.metrics_test.compute().items()},
-            {k: v.item() for k, v in self.metrics_test_adv.compute().items()},
-        )
+        return {k: v.item() for k, v in self.metrics_test.compute().items()}
 
 
 def init(module: object, class_args: dict):
@@ -286,7 +314,6 @@ if __name__ == "__main__":
         "--epsilon",
         action="store",
         type=float,
-        required=True,
         help="Epsilon used in the attacks",
     )
 
@@ -302,8 +329,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     config = toml.load(Path(args.config))
-    attack_target, attack_target_name = get_attack_target(config, args.target)
     experiments = get_experiments(config, args.experiment)
+    if args.epsilon is not None:
+        attack_target, attack_target_name = get_attack_target(config, args.target)
+    else:
+        attack_target = None
+        attack_target_name = "_"
 
     for experiment in experiments:
         tester = Tester(config, experiment.name)
