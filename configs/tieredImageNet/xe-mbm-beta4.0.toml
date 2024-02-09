@@ -10,7 +10,7 @@ accuracy-top-1 = 15
 
 [model]
 class = "EfficientNetB0"
-num_classes = 1010
+num_classes = 608
 dropout = 0.2
 weights = "IMAGENET1K_V1"
 

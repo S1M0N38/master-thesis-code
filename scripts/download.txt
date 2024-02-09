@@ -1,3 +1,5 @@
+################################################################################
+
 experiments/CIFAR100/0606_1452_6e6081e4_xe-onehot/results/
 experiments/CIFAR100/0707_0627_8bc6fb3e_xe-onehot/results/
 experiments/CIFAR100/0707_1458_8bc6fb3e_xe-onehot/results/
@@ -27,3 +29,41 @@ experiments/CIFAR100/0707_1924_02f6d919_cd-desc-pca-d100/results/
 experiments/CIFAR100/0707_2336_02f6d919_cd-desc-pca-d100/results/
 experiments/CIFAR100/0708_1754_02f6d919_cd-desc-pca-d100/results/
 experiments/CIFAR100/0708_2357_02f6d919_cd-desc-pca-d100/results/
+
+################################################################################
+
+experiments/iNaturalist19/0908_1416_d654214a_xe-onehot/results/
+experiments/iNaturalist19/1015_2338_73fd1b15_xe-onehot/results/
+# python -W ignore train.py configs/iNaturalist19/xe-onehot.toml
+# python -W ignore train.py configs/iNaturalist19/xe-onehot.toml
+# python -W ignore train.py configs/iNaturalist19/xe-onehot.toml
+
+experiments/iNaturalist19/0107_1526_976527fb_xe-mbm-beta15.0/results/
+experiments/iNaturalist19/0109_2325_976527fb_xe-mbm-beta15.0/results/
+experiments/iNaturalist19/0113_1700_976527fb_xe-mbm-beta15.0/results/
+experiments/iNaturalist19/0829_1305_3cea2b42_xe-mbm-beta15.0/results/
+# experiments/iNaturalist19/0115_1158_976527fb_xe-mbm-beta15.0/results/
+
+experiments/iNaturalist19/1005_2134_01fbc935_xe-b3p-beta0.5/results/
+experiments/iNaturalist19/1013_1241_01fbc935_xe-b3p-beta0.5/results/
+# python -W ignore train.py configs/iNaturalist19/xe-b3p-beta0.5.toml
+# python -W ignore train.py configs/iNaturalist19/xe-b3p-beta0.5.toml
+# python -W ignore train.py configs/iNaturalist19/xe-b3p-beta0.5.toml
+
+# python -W ignore train.py configs/iNaturalist19/cd-barz-denzler.toml
+# python -W ignore train.py configs/iNaturalist19/cd-barz-denzler.toml
+# python -W ignore train.py configs/iNaturalist19/cd-barz-denzler.toml
+# python -W ignore train.py configs/iNaturalist19/cd-barz-denzler.toml
+# python -W ignore train.py configs/iNaturalist19/cd-barz-denzler.toml
+
+experiments/iNaturalist19/1017_1813_c045d991_cd-desc-pca-d300/results/
+experiments/iNaturalist19/1004_0201_6dd4fcef_cd-desc-pca-d300/results/
+experiments/iNaturalist19/1019_1539_c045d991_cd-desc-pca-d300/results/
+# python -W ignore train.py configs/iNaturalist19/cd-desc-pca-d300.toml
+# python -W ignore train.py configs/iNaturalist19/cd-desc-pca-d300.toml
+
+################################################################################
+
+evals/CIFAR100
+evals/iNaturalist19
+# evals/tieredImageNet
